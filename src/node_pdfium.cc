@@ -506,7 +506,7 @@ void EncodePagesResult(const std::vector<std::string>& iResult, v8::Handle<v8::A
   for(std::vector<std::string>::const_iterator it = iResult.begin(); it != iResult.end(); ++it) {
     #if NODE_VERSION_AT_LEAST(4,0,0)
     // node::Bufferr::New now returns a v8::MaybeLocal<v8::Object>, we need a value for freaks sake.
-    v8::Local<v8::Value> data = node::Buffer::New(MY_NODE_MODULE_ISOLATE_PRE const_cast<char*>(it->c_str()), it->size())->Get(0);
+    v8::Local<v8::Value> data = node::Buffer::New(MY_NODE_MODULE_ISOLATE_PRE const_cast<char*>(it->c_str()), it->size()).Get(0);
     #else
     v8::Local<v8::Value> data = node::Buffer::New(MY_NODE_MODULE_ISOLATE_PRE it->c_str(), it->size());
     #endif
