@@ -504,7 +504,12 @@ void EncodePagesResult(const std::vector<std::string>& iResult, v8::Handle<v8::A
   MY_NODE_MODULE_ISOLATE_DECL;
   int i = 0;
   for(std::vector<std::string>::const_iterator it = iResult.begin(); it != iResult.end(); ++it) {
+    #if NODE_VERSION_AT_LEAST(4,0,0)
+    // node::Bufferr::New now returns a v8::MaybeLocal<v8::Object>, we need a value for freaks sake.
+    v8::Local<v8::Object> data = node::Buffer::New(MY_NODE_MODULE_ISOLATE_PRE const_cast<char*>(it->c_str()), it->size()).ToLocalChecked();
+    #else
     v8::Local<v8::Value> data = node::Buffer::New(MY_NODE_MODULE_ISOLATE_PRE it->c_str(), it->size());
+    #endif
     oResult->Set(i++, data);
   }
 }
@@ -575,11 +580,20 @@ MY_NODE_MODULE_CALLBACK(render)
   v8::String::Utf8Value outputFormatObject(options->Get(V8_STRING_NEW_UTF8("outputFormat"))->ToString());
   v8::Local<v8::Object> dataobject = options->Get(V8_STRING_NEW_UTF8("data")).As<v8::Object>();
 
-  if(dataobject->IsObject() && dataobject->HasIndexedPropertiesInExternalArrayData())
-  {
-    req->data.assign(static_cast<char*>(dataobject->GetIndexedPropertiesExternalArrayData()),
-            dataobject->GetIndexedPropertiesExternalArrayDataLength());
-  }
+  #if NODE_VERSION_AT_LEAST(4,0,0)
+    if(dataobject->IsObject())
+    {
+      v8::ArrayBuffer::Contents data_contents = dataobject.As<v8::ArrayBuffer>()->GetContents();
+      req->data.assign(static_cast<char*>(data_contents.Data()), data_contents.ByteLength());
+    }
+  #else
+    if(dataobject->IsObject() && dataobject->HasIndexedPropertiesInExternalArrayData())
+    {
+      req->data.assign(static_cast<char*>(dataobject->GetIndexedPropertiesExternalArrayData()),
+              dataobject->GetIndexedPropertiesExternalArrayDataLength());
+    }
+  #endif
+
   else
   {
     RETURN_EXCEPTION_STR_CB("data must be a Buffer", callback);
